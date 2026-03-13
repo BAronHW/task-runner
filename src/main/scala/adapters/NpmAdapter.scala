@@ -3,6 +3,10 @@ package adapters
 import cats.effect.{ExitCode, IO}
 import core.DiscoveredTask
 import fs2.io.file.{Files, Path}
+import io.circe.parser
+import io.circe.generic.auto._
+
+case class PackageJson(name: Option[String], scripts: Option[Map[String, String]])
 
 object NpmAdapter extends TaskDiscoverer[IO] {
 
@@ -15,22 +19,27 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       .head
       .compile
       .last
-      .map(_.isDefined)  // True if at least one package.json exists in the tree
+      .map(_.isDefined)
   }
 
+  override def discover(dir: Path): IO[List[DiscoveredTask]] =
+    Files[IO]
+      .walk(dir)
+      .filter(_.fileName.toString == "package.json")
+      .evalMap(readAndParse)
+      .flatMap(fs2.Stream.emits)
+      .compile
+      .toList
 
-    override def discover(dir: Path): IO[List[DiscoveredTask]] = {
-    // TODO: Read and parse package.json to extract scripts
-    val listOfDiscoveredTasks = this.detect(dir).flatMap { hasPackageJson =>
-      if (hasPackageJson) {
-        val files = Files[IO]
-          .walk(dir)
-          .filter(_.equals(dir/"package.json"))
-          .map()
-        files
-      } else {
-        IO.pure(List.empty)
+  def readAndParse(path: Path): IO[List[DiscoveredTask]] =
+    Files[IO]
+      .readUtf8(path)
+      .compile
+      .string
+      .flatMap(content => IO.fromEither(parser.decode[PackageJson](content)))
+      .map { pkg =>
+        pkg.scripts.getOrElse(Map.empty).map { case (scriptName, command) =>
+          DiscoveredTask(name = scriptName, command = command, description = None, source = "npm")
+        }.toList
       }
-    }
-  }
 }
