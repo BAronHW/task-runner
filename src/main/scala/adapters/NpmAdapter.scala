@@ -26,7 +26,12 @@ object NpmAdapter extends TaskDiscoverer[IO] {
     Files[IO]
       .walk(dir)
       .filter(_.fileName.toString == "package.json")
-      .evalMap(readAndParse)
+      .evalMap {
+        path =>
+          readAndParse(path).handleErrorWith { e =>
+            IO.println(s"Error reading $path: $e") >> IO.pure(List.empty[DiscoveredTask])
+          }
+      }
       .flatMap(fs2.Stream.emits)
       .compile
       .toList
