@@ -2,6 +2,7 @@ package adapters
 
 import cats.effect.{ExitCode, IO}
 import core.DiscoveredTask
+import error_handling.FormatError
 import fs2.io.file.{Files, Path}
 import io.circe.parser
 import io.circe.generic.auto._
@@ -41,7 +42,10 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       .readUtf8(path)
       .compile
       .string
-      .flatMap(content => IO.fromEither(parser.decode[PackageJson](content)))
+      .flatMap(content => parser.decode[PackageJson](content) match {
+        case Left(error) => IO.raiseError(FormatError(error.getMessage))
+        case Right(pkg)  => IO.pure(pkg)
+      })
       .map { pkg =>
         pkg.scripts.getOrElse(Map.empty).map { case (scriptName, command) =>
           DiscoveredTask(name = scriptName, command = command, description = None, source = "npm")

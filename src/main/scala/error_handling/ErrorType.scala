@@ -1,7 +1,6 @@
 package error_handling
 
-sealed trait ErrorType
-case object UnknownDependancy extends ErrorType
-case object CyclicalDependancy extends ErrorType
-case object FormatError extends ErrorType
-case object DefaultError extends ErrorType
+case class UnknownDependancy(message: String) extends Exception(message)
+case class CyclicalDependancy(message: String) extends Exception(message)
+case class FormatError(message: String) extends Exception(message)
+case class DefaultError(message: String) extends Exception(message)
