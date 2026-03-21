@@ -1,0 +1,11 @@
+tasks:
+  test:
+    cmd: vitest
+    depends: [compile]
+  compile:
+    cmd: tsc --noEmit
+  build:
+    cmd: npm run build
+    depends: [test, compile]
+  clean:
+    cmd: rm -rf dist

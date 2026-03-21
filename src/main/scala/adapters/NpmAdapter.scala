@@ -37,7 +37,7 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       .compile
       .toList
 
-  def readAndParse(path: Path): IO[List[DiscoveredTask]] =
+  private def readAndParse(path: Path): IO[List[DiscoveredTask]] =
     Files[IO]
       .readUtf8(path)
       .compile
