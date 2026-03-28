@@ -7,10 +7,15 @@ import fs2.io.file.{Files, Path}
 import io.circe.yaml.parser
 import io.circe.generic.auto._
 
-case class TaskRunnerYamlChildBlock(name: String, command: String, description: String)
+case class TaskRunnerYamlChildBlock(
+    name: String,
+    command: String,
+    description: String,
+    dependsOn: Option[List[TaskRunnerYamlChildBlock]]
+)
 case class TaskRunnerConfig(tasks: List[TaskRunnerYamlChildBlock])
 
-object TaskConfigAdapter extends TaskDiscoverer[IO]{
+object TaskConfigAdapter extends TaskDiscoverer[IO] {
 
   override def name: String = "task_config"
 
@@ -28,11 +33,12 @@ object TaskConfigAdapter extends TaskDiscoverer[IO]{
     Files[IO]
       .walk(dir)
       .filter(_.fileName.toString.endsWith(".taskrunner.yaml"))
-      .evalMap {
-        path =>
-          readAndParse(path).handleErrorWith { e =>
-            IO.println(s"Error reading $path: $e") >> IO.pure(List.empty[DiscoveredTask])
-          }
+      .evalMap { path =>
+        readAndParse(path).handleErrorWith { e =>
+          IO.println(s"Error reading $path: $e") >> IO.pure(
+            List.empty[DiscoveredTask]
+          )
+        }
       }
       .flatMap(fs2.Stream.emits)
       .compile
@@ -44,18 +50,21 @@ object TaskConfigAdapter extends TaskDiscoverer[IO]{
       .readUtf8(path)
       .compile
       .string
-      .flatMap(content => parser.decode[TaskRunnerConfig](content) match {
-        case Left(error) => IO.raiseError(FormatError(error.getMessage))
-        case Right(pkg)  => IO.pure(pkg)
-      })
+      .flatMap(content =>
+        parser.decode[TaskRunnerConfig](content) match {
+          case Left(error) => IO.raiseError(FormatError(error.getMessage))
+          case Right(pkg)  => IO.pure(pkg)
+        }
+      )
       .map { pkg =>
-        pkg.tasks.map {
-          childTask =>
-            createDiscoveredTask(childTask)
+        pkg.tasks.map { childTask =>
+          createDiscoveredTask(childTask)
         }
       }
 
-  private def createDiscoveredTask(taskRunnerChild: TaskRunnerYamlChildBlock): DiscoveredTask = {
+  private def createDiscoveredTask(
+      taskRunnerChild: TaskRunnerYamlChildBlock
+  ): DiscoveredTask = {
     DiscoveredTask(
       name = taskRunnerChild.name,
       command = taskRunnerChild.command,

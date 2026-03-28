@@ -48,7 +48,12 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       })
       .map { pkg =>
         pkg.scripts.getOrElse(Map.empty).map { case (scriptName, command) =>
-          DiscoveredTask(name = scriptName, command = command, description = None, source = this.name)
+          DiscoveredTask(
+            name = scriptName,
+            command = command,
+            description = None,
+            source = this.name
+          )
         }.toList
       }
 }
