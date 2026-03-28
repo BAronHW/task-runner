@@ -1,0 +1,32 @@
+tasks:
+  - name: build
+    command: ./gradlew build
+    description: Compiles the project and outputs artifacts
+
+  - name: test
+    command: ./gradlew test
+    description: Runs the full test suite
+
+  - name: lint
+    command: ktlint src/**/*.kt
+    description: Lints all Kotlin source files
+
+  - name: format
+    command: ktlint --format src/**/*.kt
+    description: Auto formats all Kotlin source files
+
+  - name: clean
+    command: ./gradlew clean
+    description: Deletes all build output directories
+
+  - name: run
+    command: ./gradlew run
+    description: Starts the application locally
+
+  - name: docker-build
+    command: docker build -t myapp:latest .
+    description: Builds the Docker image
+
+  - name: docker-run
+    command: docker run -p 8080:8080 myapp:latest
+    description: Runs the app inside a Docker container
