@@ -1,13 +1,16 @@
 package adapters
 
-import cats.effect.{ExitCode, IO}
+import cats.effect.IO
 import core.DiscoveredTask
 import error_handling.FormatError
 import fs2.io.file.{Files, Path}
 import io.circe.parser
 import io.circe.generic.auto._
 
-case class PackageJson(name: Option[String], scripts: Option[Map[String, String]])
+case class PackageJson(
+    name: Option[String],
+    scripts: Option[Map[String, String]]
+)
 
 object NpmAdapter extends TaskDiscoverer[IO] {
 
@@ -27,11 +30,12 @@ object NpmAdapter extends TaskDiscoverer[IO] {
     Files[IO]
       .walk(dir)
       .filter(_.fileName.toString == "package.json")
-      .evalMap {
-        path =>
-          readAndParse(path).handleErrorWith { e =>
-            IO.println(s"Error reading $path: $e") >> IO.pure(List.empty[DiscoveredTask])
-          }
+      .evalMap { path =>
+        readAndParse(path).handleErrorWith { e =>
+          IO.println(s"Error reading $path: $e") >> IO.pure(
+            List.empty[DiscoveredTask]
+          )
+        }
       }
       .flatMap(fs2.Stream.emits)
       .compile
@@ -42,18 +46,23 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       .readUtf8(path)
       .compile
       .string
-      .flatMap(content => parser.decode[PackageJson](content) match {
-        case Left(error) => IO.raiseError(FormatError(error.getMessage))
-        case Right(pkg)  => IO.pure(pkg)
-      })
+      .flatMap(content =>
+        parser.decode[PackageJson](content) match {
+          case Left(error) => IO.raiseError(FormatError(error.getMessage))
+          case Right(pkg)  => IO.pure(pkg)
+        }
+      )
       .map { pkg =>
-        pkg.scripts.getOrElse(Map.empty).map { case (scriptName, command) =>
-          DiscoveredTask(
-            name = scriptName,
-            command = command,
-            description = None,
-            source = this.name
-          )
-        }.toList
+        pkg.scripts
+          .getOrElse(Map.empty)
+          .map { case (scriptName, command) =>
+            DiscoveredTask(
+              name = scriptName,
+              command = command,
+              description = None,
+              source = this.name
+            )
+          }
+          .toList
       }
 }
