@@ -3,7 +3,7 @@ import adapters.TaskSource.{Npm, Yaml}
 
 case class UnresolvedTask(task: Task, dependencyNames: List[String])
 
-object TaskManager {
+object TaskResolver {
 
   def resolveAll(discoveredTasks: List[DiscoveredTask]): List[Task] = {
     val unresolved = discoveredTasks.map(toUnresolvedTask)

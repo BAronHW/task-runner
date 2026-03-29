@@ -8,15 +8,16 @@ case class DiscoveredTask(
     name: String,
     command: String,
     description: Option[String],
-    dependencies: Option[List[String]],
-    source: String
+    dependencies: List[String],
+    source: TaskSource
 )
 
 case class Task(
     id: UUID,
     name: String,
     command: String,
-    dependencies: List[String],
+    description: Option[String],
+    dependencies: List[Task],
     source: TaskSource
 )
 

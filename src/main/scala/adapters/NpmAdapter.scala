@@ -7,14 +7,9 @@ import fs2.io.file.{Files, Path}
 import io.circe.parser
 import io.circe.generic.auto._
 
-case class PackageJson(
-    name: Option[String],
-    scripts: Option[Map[String, String]]
-)
-
 object NpmAdapter extends TaskDiscoverer[IO] {
 
-  override def name: String = "npm"
+  override def name: TaskSource = TaskSource.Npm
 
   override def detect(dir: Path): IO[Boolean] = {
     Files[IO]
@@ -33,15 +28,24 @@ object NpmAdapter extends TaskDiscoverer[IO] {
       .evalMap { path =>
         readAndParse(path).handleErrorWith { e =>
           IO.println(s"Error reading $path: $e") >> IO.pure(
-            List.empty[DiscoveredTask]
+            List.empty[NpmBlock]
           )
         }
       }
       .flatMap(fs2.Stream.emits)
+      .map(block =>
+        DiscoveredTask(
+          name = block.name,
+          command = block.command,
+          description = block.description,
+          dependencies = List(),
+          source = this.name
+        )
+      )
       .compile
       .toList
 
-  private def readAndParse(path: Path): IO[List[DiscoveredTask]] =
+  private def readAndParse(path: Path): IO[List[NpmBlock]] =
     Files[IO]
       .readUtf8(path)
       .compile
@@ -56,12 +60,7 @@ object NpmAdapter extends TaskDiscoverer[IO] {
         pkg.scripts
           .getOrElse(Map.empty)
           .map { case (scriptName, command) =>
-            DiscoveredTask(
-              name = scriptName,
-              command = command,
-              description = None,
-              source = this.name
-            )
+            NpmBlock(name = scriptName, command = command)
           }
           .toList
       }

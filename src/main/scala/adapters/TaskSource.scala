@@ -10,10 +10,11 @@ object TaskSource {
   final case object Gradle extends TaskSource(name = "gradle")
   final case object Maven extends TaskSource(name = "maven")
   final case object Make extends TaskSource(name = "make")
+  final case object Yaml extends TaskSource(name = "yaml")
 }
 
 trait TaskDiscoverer[F[_]] {
-  def name: String
+  def name: TaskSource
   def detect(dir: Path): F[Boolean]
   def discover(dir: Path): F[List[DiscoveredTask]]
 }

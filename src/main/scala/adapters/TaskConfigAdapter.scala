@@ -7,17 +7,9 @@ import fs2.io.file.{Files, Path}
 import io.circe.yaml.parser
 import io.circe.generic.auto._
 
-case class TaskRunnerYamlChildBlock(
-    name: String,
-    command: String,
-    description: String,
-    dependsOn: Option[List[TaskRunnerYamlChildBlock]]
-)
-case class TaskRunnerConfig(tasks: List[TaskRunnerYamlChildBlock])
-
 object TaskConfigAdapter extends TaskDiscoverer[IO] {
 
-  override def name: String = "task_config"
+  override def name: TaskSource = TaskSource.Yaml
 
   override def detect(dir: Path): IO[Boolean] = {
     Files[IO]
@@ -68,8 +60,9 @@ object TaskConfigAdapter extends TaskDiscoverer[IO] {
     DiscoveredTask(
       name = taskRunnerChild.name,
       command = taskRunnerChild.command,
-      description = Some(taskRunnerChild.description),
-      source = this.name
+      description = taskRunnerChild.description,
+      source = this.name,
+      dependencies = taskRunnerChild.dependsOn.getOrElse(List.empty)
     )
   }
 }

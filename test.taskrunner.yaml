@@ -6,6 +6,8 @@ tasks:
   - name: test
     command: ./gradlew test
     description: Runs the full test suite
+    dependencies:
+      - build
 
   - name: lint
     command: ktlint src/**/*.kt
@@ -14,6 +16,8 @@ tasks:
   - name: format
     command: ktlint --format src/**/*.kt
     description: Auto formats all Kotlin source files
+    dependencies:
+      - lint
 
   - name: clean
     command: ./gradlew clean
@@ -22,11 +26,18 @@ tasks:
   - name: run
     command: ./gradlew run
     description: Starts the application locally
+    dependencies:
+      - build
 
   - name: docker-build
     command: docker build -t myapp:latest .
     description: Builds the Docker image
+    dependencies:
+      - build
+      - test
 
   - name: docker-run
     command: docker run -p 8080:8080 myapp:latest
     description: Runs the app inside a Docker container
+    dependencies:
+      - docker-build
