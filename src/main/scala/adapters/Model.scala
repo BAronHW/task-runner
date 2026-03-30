@@ -4,14 +4,14 @@ sealed trait AdapterBlock {
   def name: String
   def command: String
   def description: Option[String]
-  def dependsOn: Option[List[String]]
+  def dependencies: Option[List[String]]
 }
 
 case class TaskRunnerYamlChildBlock(
     name: String,
     command: String,
     description: Option[String],
-    dependsOn: Option[List[String]]
+    dependencies: Option[List[String]]
 ) extends AdapterBlock
 
 case class NpmBlock(
@@ -19,7 +19,7 @@ case class NpmBlock(
     command: String
 ) extends AdapterBlock {
   override val description: Option[String] = None
-  override val dependsOn: Option[List[String]] = None
+  override val dependencies: Option[List[String]] = None
 }
 
 case class PackageJson(

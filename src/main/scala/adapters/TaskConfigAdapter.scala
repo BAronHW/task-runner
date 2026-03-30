@@ -62,7 +62,7 @@ object TaskConfigAdapter extends TaskDiscoverer[IO] {
       command = taskRunnerChild.command,
       description = taskRunnerChild.description,
       source = this.name,
-      dependencies = taskRunnerChild.dependsOn.getOrElse(List.empty)
+      dependencies = taskRunnerChild.dependencies.getOrElse(List.empty)
     )
   }
 }
