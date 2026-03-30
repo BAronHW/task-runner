@@ -5,6 +5,10 @@ case class UnresolvedTask(task: Task, dependencyNames: List[String])
 
 object TaskResolver {
 
+  /** The main function that is exposed on this object that is called by the main runtime
+    * public facing api to allow all discoveredTasks to be resolved and given dependencies
+    * @param discoveredTasks - A list of all the discoveredTasks from all sourcs
+    */
   def resolveAll(discoveredTasks: List[DiscoveredTask]): List[Task] = {
     val unresolved =
       discoveredTasks.distinctBy(d => (d.name, d.source)).map(toUnresolvedTask)
