@@ -1,5 +1,0 @@
-package config
-
-trait TaskConfig {
-
-}
