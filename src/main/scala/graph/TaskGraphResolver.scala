@@ -7,14 +7,16 @@ object TaskGraph {
 
   def topologicalSort(
       tasks: List[Task]
-  ): Either[CyclicalDependancyError, List[String]] = {
+  ): Either[CyclicalDependancyError, List[Task]] = {
     val indegreeMap = buildInDegreeMap(tasks)
     val reverseGraph = compileReverseGraph(tasks)
 
-    val processQueue = List.empty
     val zeroIndegreeTasks = indegreeMap.filter { case (_, indegree) =>
       indegree == 0
     }
+    val processQueue = zeroIndegreeTasks.keys.toList
+
+    val sortedTaskAcc = List.empty
 
   }
 
@@ -35,5 +37,20 @@ object TaskGraph {
     tasks.map { task =>
       (task, tasks.filter(_.dependencies.contains(task)))
     }.toMap
+  }
+
+  private def loop(
+      currentQueue: List[Task],
+      inDegreeMap: Map[Task, Int],
+      acc: List[Task]
+  ) = {
+    currentQueue match {
+      case Nil => // base case
+      case head :: tail => {
+        val newAcc = acc ++ head
+
+      }
+    }
+
   }
 }
