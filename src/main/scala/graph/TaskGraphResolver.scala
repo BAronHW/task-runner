@@ -16,8 +16,9 @@ object TaskGraph {
     }
     val processQueue = zeroIndegreeTasks.keys.toList
 
-    val sortedTaskAcc = List.empty
+    val sortedTaskAcc = List.empty[Task]
 
+    loop(processQueue, indegreeMap, reverseGraph, sortedTaskAcc)
   }
 
   /** Creates an in degree map for every task in a given task list
@@ -42,15 +43,17 @@ object TaskGraph {
   private def loop(
       currentQueue: List[Task],
       inDegreeMap: Map[Task, Int],
+      reverseGraphMap: Map[Task, List[Task]],
       acc: List[Task]
-  ) = {
+  ): List[Task] = {
     currentQueue match {
-      case Nil => // base case
+      case Nil => acc
       case head :: tail => {
-        val newAcc = acc ++ head
-
+        val newAcc = acc :+ head
+        val dependents = reverseGraphMap.getOrElse(head, List.empty)
+        // TODO: decrement indegrees, find newly zero-indegree tasks, recurse
+        loop(tail, inDegreeMap, reverseGraphMap, newAcc)
       }
     }
-
   }
 }
