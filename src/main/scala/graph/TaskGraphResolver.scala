@@ -44,6 +44,13 @@ object TaskGraph {
     }.toMap
   }
 
+  /** Implementation of Kahns algorithm
+    * @param currentQueue - Queue of nodes with indegree of 0
+    * @param inDegreeMap - A Map that contains the Task and its respective in-degree count
+    * @param reverseGraphMap - A map that contains the Task and its respective List of dependencies
+    * @param acc - List of accumulated processed tasks
+    * @return
+    */
   private def loop(
       currentQueue: List[Task],
       inDegreeMap: Map[Task, Int],
