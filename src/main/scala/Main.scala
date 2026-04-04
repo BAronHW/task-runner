@@ -3,6 +3,7 @@ import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits.catsSyntaxParallelTraverse1
 import core.TaskResolver
 import fs2.io.file.Path
+import graph.TaskGraph
 
 object Main extends IOApp {
 
@@ -14,13 +15,14 @@ object Main extends IOApp {
       .parTraverse(_.discover(path))
       .map(_.flatten)
       .map(TaskResolver.resolveAll)
-      .flatMap(tasks =>
-        IO(tasks.foreach { t =>
-          println(
-            s"${t.name} -> [${t.dependencies.map(_.name).mkString(", ")}]"
-          )
-        })
-      )
+      .map(tasks => TaskGraph.topologicalSort(tasks))
+      .flatMap {
+        case Left(error) => IO.println(s"Cycle detected: ${error.message}")
+        case Right(sorted) =>
+          IO {
+            sorted.foreach(t => println(s"${t.name}"))
+          }
+      }
       .as(ExitCode.Success)
   }
 }

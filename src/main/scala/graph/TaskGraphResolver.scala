@@ -18,7 +18,11 @@ object TaskGraph {
 
     val sortedTaskAcc = List.empty[Task]
 
-    loop(processQueue, indegreeMap, reverseGraph, sortedTaskAcc)
+    loop(processQueue, indegreeMap, reverseGraph, sortedTaskAcc) match {
+      case Right(sorted) if sorted.length < tasks.length =>
+        Left(CyclicalDependancyError("Cyclical Dependency Error"))
+      case result => result
+    }
   }
 
   /** Creates an in degree map for every task in a given task list
@@ -36,7 +40,7 @@ object TaskGraph {
     */
   private def compileReverseGraph(tasks: List[Task]): Map[Task, List[Task]] = {
     tasks.map { task =>
-      (task, tasks.filter(_.dependencies.contains(task)))
+      (task, tasks.filter(_.dependencies.exists(_.name == task.name)))
     }.toMap
   }
 
@@ -45,14 +49,27 @@ object TaskGraph {
       inDegreeMap: Map[Task, Int],
       reverseGraphMap: Map[Task, List[Task]],
       acc: List[Task]
-  ): List[Task] = {
+  ): Either[CyclicalDependancyError, List[Task]] = {
     currentQueue match {
-      case Nil => acc
+      case Nil => Right(acc)
       case head :: tail => {
         val newAcc = acc :+ head
+        // the list of tasks from the head of the queue
         val dependents = reverseGraphMap.getOrElse(head, List.empty)
         // TODO: decrement indegrees, find newly zero-indegree tasks, recurse
-        loop(tail, inDegreeMap, reverseGraphMap, newAcc)
+        val newInDegreeMap = dependents.foldLeft(inDegreeMap) {
+          (currentMap, task) =>
+            currentMap.updated(task, (currentMap.getOrElse(task, 0) - 1))
+        }
+        val zeroIndegreeTask = dependents.filter { task =>
+          newInDegreeMap.getOrElse(task, 0) == 0
+        }
+        loop(
+          tail ++ zeroIndegreeTask,
+          newInDegreeMap,
+          reverseGraphMap,
+          newAcc
+        )
       }
     }
   }
