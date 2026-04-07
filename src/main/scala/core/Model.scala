@@ -21,6 +21,8 @@ case class Task(
     source: TaskSource
 )
 
+case class UnresolvedTask(task: Task, dependencyNames: List[String])
+
 //This is the enum for pending/running/failed/successful tasks
 sealed abstract class TaskStatus(status: String)
 object TaskStatus {
@@ -28,4 +30,5 @@ object TaskStatus {
   final case object Success extends TaskStatus("success")
   final case object Pending extends TaskStatus("pending")
   final case object Running extends TaskStatus("running")
+  final case object Skipped extends TaskStatus("skipped")
 }

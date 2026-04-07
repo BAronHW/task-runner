@@ -2,8 +2,6 @@ package core
 import adapters.TaskSource
 import adapters.TaskSource.{Npm, Yaml}
 
-case class UnresolvedTask(task: Task, dependencyNames: List[String])
-
 object TaskResolver {
 
   /** The main function that is exposed on this object that is called by the main runtime
@@ -27,7 +25,7 @@ object TaskResolver {
   private def toUnresolvedTask(
       discoveredTask: DiscoveredTask
   ): UnresolvedTask = {
-    val unresolved = UnresolvedTask(
+    UnresolvedTask(
       task = Task(
         id = java.util.UUID.randomUUID(),
         name = discoveredTask.name,
@@ -38,7 +36,6 @@ object TaskResolver {
       ),
       dependencyNames = discoveredTask.dependencies
     )
-    unresolved
   }
 
   /** Resolves an unresolvedTasks dependencies by passing logic to helper methods depending on

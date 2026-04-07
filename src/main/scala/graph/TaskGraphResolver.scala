@@ -3,8 +3,17 @@ package graph
 import adapters.TaskRunnerConfig
 import core.Task
 
-object TaskGraph {
+import scala.annotation.tailrec
 
+object TaskGraphResolver {
+
+  /** Sorts a list of tasks into a valid execution order using Kahn's algorithm.
+    * Tasks with no dependencies come first; tasks that depend on others follow
+    * only after all their dependencies have been placed before them.
+    * @param tasks - A list of fully resolved tasks (dependencies already linked)
+    * @return Right with tasks in execution order, or Left with a CyclicalDependancyError
+    *         if the dependency graph contains a cycle
+    */
   def topologicalSort(
       tasks: List[Task]
   ): Either[CyclicalDependancyError, List[Task]] = {
@@ -44,13 +53,26 @@ object TaskGraph {
     }.toMap
   }
 
-  /** Implementation of Kahns algorithm
-    * @param currentQueue - Queue of nodes with indegree of 0
-    * @param inDegreeMap - A Map that contains the Task and its respective in-degree count
-    * @param reverseGraphMap - A map that contains the Task and its respective List of dependencies
-    * @param acc - List of accumulated processed tasks
-    * @return
+  /** Recursive implementation of Kahn's algorithm.
+    *
+    * Steps:
+    * 1. Base case — if the queue is empty, return the accumulated list as Right(acc)
+    * 2. Take the head task off the queue and append it to the accumulator
+    * 3. Look up which tasks depend on head via the reverse graph (i.e. which tasks head unblocks)
+    * 4. Decrement the in-degree of each of those dependents by 1, since head has now been processed
+    * 5. Filter the dependents to find those whose in-degree has reached 0 (now fully unblocked)
+    * 6. Append the newly unblocked tasks to the remaining queue and recurse
+    *
+    * Cycle detection is handled in topologicalSort after the loop completes —
+    * if the output list is shorter than the input, some tasks were never unblocked (stuck in a cycle).
+    *
+    * @param currentQueue - Queue of tasks with an in-degree of 0, ready to be processed
+    * @param inDegreeMap - A Map of each Task to its current in-degree count
+    * @param reverseGraphMap - A Map of each Task to the list of tasks that depend on it
+    * @param acc - Accumulated list of processed tasks in execution order
+    * @return Right with a list of tasks in execution order, or Left with a CyclicalDependancyError if a cycle is detected
     */
+  @tailrec
   private def loop(
       currentQueue: List[Task],
       inDegreeMap: Map[Task, Int],
@@ -61,9 +83,7 @@ object TaskGraph {
       case Nil => Right(acc)
       case head :: tail => {
         val newAcc = acc :+ head
-        // the list of tasks from the head of the queue
         val dependents = reverseGraphMap.getOrElse(head, List.empty)
-        // TODO: decrement indegrees, find newly zero-indegree tasks, recurse
         val newInDegreeMap = dependents.foldLeft(inDegreeMap) {
           (currentMap, task) =>
             currentMap.updated(task, (currentMap.getOrElse(task, 0) - 1))
