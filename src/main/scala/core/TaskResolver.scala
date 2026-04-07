@@ -1,4 +1,5 @@
 package core
+import adapters.TaskSource
 import adapters.TaskSource.{Npm, Yaml}
 
 case class UnresolvedTask(task: Task, dependencyNames: List[String])
@@ -37,7 +38,6 @@ object TaskResolver {
       ),
       dependencyNames = discoveredTask.dependencies
     )
-    println(unresolved.dependencyNames)
     unresolved
   }
 
@@ -67,9 +67,9 @@ object TaskResolver {
     */
   private def resolveNpmDeps(task: Task, allTasks: List[Task]): List[Task] =
     allTasks
+      .filter(other => other.source == TaskSource.Npm)
       .filter(other => other.name != task.name)
       .filter(other => task.command.contains(s"npm run ${other.name}"))
-      .distinctBy(_.name)
 
   /** Resolves task dependencies by comparing them against all other tasks
     * Compares against all other tasks and links them together
@@ -82,7 +82,7 @@ object TaskResolver {
       allTasks: List[Task]
   ): List[Task] =
     allTasks
+      .filter(other => other.source == TaskSource.Yaml)
       .filter(other => other.name != unresolved.task.name)
       .filter(other => unresolved.dependencyNames.contains(other.name))
-      .distinctBy(_.name)
 }
