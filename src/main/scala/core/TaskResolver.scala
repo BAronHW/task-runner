@@ -51,6 +51,7 @@ object TaskResolver {
     val deps = unresolved.task.source match {
       case Npm  => resolveNpmDeps(unresolved.task, allTasks)
       case Yaml => resolveYamlDeps(unresolved, allTasks)
+      case _    => List.empty
     }
     unresolved.task.copy(dependencies = deps)
   }

@@ -2,7 +2,7 @@ package adapters
 
 import cats.effect.IO
 import core.DiscoveredTask
-import error_handling.FormatError
+import errors.FormatError
 import fs2.io.file.{Files, Path}
 import io.circe.parser
 import io.circe.generic.auto._

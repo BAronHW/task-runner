@@ -11,12 +11,12 @@ object TaskGraphResolver {
     * Tasks with no dependencies come first; tasks that depend on others follow
     * only after all their dependencies have been placed before them.
     * @param tasks - A list of fully resolved tasks (dependencies already linked)
-    * @return Right with tasks in execution order, or Left with a CyclicalDependancyError
+    * @return Right with tasks in execution order, or Left with a CyclicalDependencyError
     *         if the dependency graph contains a cycle
     */
   def topologicalSort(
       tasks: List[Task]
-  ): Either[CyclicalDependancyError, List[Task]] = {
+  ): Either[CyclicalDependencyError, List[Task]] = {
     val indegreeMap = buildInDegreeMap(tasks)
     val reverseGraph = compileReverseGraph(tasks)
 
@@ -29,8 +29,9 @@ object TaskGraphResolver {
 
     loop(processQueue, indegreeMap, reverseGraph, sortedTaskAcc) match {
       case Right(sorted) if sorted.length < tasks.length =>
-        Left(CyclicalDependancyError("Cyclical Dependency Error"))
-      case result => result
+        Left(CyclicalDependencyError("Cyclical Dependency Error"))
+      case Right(sorted) => Right(sorted.reverse)
+      case left          => left
     }
   }
 
@@ -70,7 +71,7 @@ object TaskGraphResolver {
     * @param inDegreeMap - A Map of each Task to its current in-degree count
     * @param reverseGraphMap - A Map of each Task to the list of tasks that depend on it
     * @param acc - Accumulated list of processed tasks in execution order
-    * @return Right with a list of tasks in execution order, or Left with a CyclicalDependancyError if a cycle is detected
+    * @return Right with a list of tasks in execution order, or Left with a CyclicalDependencyError if a cycle is detected
     */
   @tailrec
   private def loop(
@@ -78,11 +79,11 @@ object TaskGraphResolver {
       inDegreeMap: Map[Task, Int],
       reverseGraphMap: Map[Task, List[Task]],
       acc: List[Task]
-  ): Either[CyclicalDependancyError, List[Task]] = {
+  ): Either[CyclicalDependencyError, List[Task]] = {
     currentQueue match {
       case Nil => Right(acc)
       case head :: tail => {
-        val newAcc = acc :+ head
+        val newAcc = head :: acc
         val dependents = reverseGraphMap.getOrElse(head, List.empty)
         val newInDegreeMap = dependents.foldLeft(inDegreeMap) {
           (currentMap, task) =>

@@ -24,11 +24,11 @@ case class Task(
 case class UnresolvedTask(task: Task, dependencyNames: List[String])
 
 //This is the enum for pending/running/failed/successful tasks
-sealed abstract class TaskStatus(status: String)
+sealed trait TaskStatus { val status: String }
 object TaskStatus {
-  final case object Failed extends TaskStatus("failed")
-  final case object Success extends TaskStatus("success")
-  final case object Pending extends TaskStatus("pending")
-  final case object Running extends TaskStatus("running")
-  final case object Skipped extends TaskStatus("skipped")
+  final case object Failed  extends TaskStatus { val status = "failed"  }
+  final case object Success extends TaskStatus { val status = "success" }
+  final case object Pending extends TaskStatus { val status = "pending" }
+  final case object Running extends TaskStatus { val status = "running" }
+  final case object Skipped extends TaskStatus { val status = "skipped" }
 }

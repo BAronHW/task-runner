@@ -4,13 +4,13 @@ import cats.syntax.all._
 import core.DiscoveredTask
 import fs2.io.file.Path
 
-sealed abstract class TaskSource(name: String)
+sealed trait TaskSource { val name: String }
 object TaskSource {
-  final case object Npm extends TaskSource(name = "npm")
-  final case object Gradle extends TaskSource(name = "gradle")
-  final case object Maven extends TaskSource(name = "maven")
-  final case object Make extends TaskSource(name = "make")
-  final case object Yaml extends TaskSource(name = "yaml")
+  final case object Npm    extends TaskSource { val name = "npm"    }
+  final case object Gradle extends TaskSource { val name = "gradle" }
+  final case object Maven  extends TaskSource { val name = "maven"  }
+  final case object Make   extends TaskSource { val name = "make"   }
+  final case object Yaml   extends TaskSource { val name = "yaml"   }
 }
 
 trait TaskDiscoverer[F[_]] {

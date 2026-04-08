@@ -1,3 +1,3 @@
 package graph
 
-case class CyclicalDependancyError(message: String) extends Exception
+case class CyclicalDependencyError(message: String) extends Exception
