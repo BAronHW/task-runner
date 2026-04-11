@@ -22,7 +22,15 @@ object Main extends IOApp {
       .flatMap {
         case Left(error) => IO.println(s"Cycle detected: ${error.message}")
         case Right(sorted) =>
-          sorted.traverse_(t => IO.println(s"${t.name} from ${t.source}"))
+          IO {
+            sorted
+              .groupBy(task => task.source)
+              .foreach { case (source, taskList) =>
+                println(
+                  s"source: ${source}, and task: ${taskList.map(task => task.name)}"
+                )
+              }
+          }
       }
       .as(ExitCode.Success)
   }
