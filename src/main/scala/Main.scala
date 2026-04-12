@@ -12,10 +12,12 @@ object Main extends IOApp {
     val path = Path(dir)
 
     List(NpmAdapter, TaskConfigAdapter)
-      .parTraverse(a => a.detect(path).flatMap {
-        case false => IO.pure(Nil)
-        case true  => a.discover(path)
-      })
+      .parTraverse(a =>
+        a.detect(path).flatMap {
+          case false => IO.pure(Nil)
+          case true  => a.discover(path)
+        }
+      )
       .map(_.flatten)
       .map(TaskResolver.resolveAll)
       .map(tasks => TaskGraphResolver.topologicalSort(tasks))
@@ -27,7 +29,7 @@ object Main extends IOApp {
               .groupBy(task => task.source)
               .foreach { case (source, taskList) =>
                 println(
-                  s"source: ${source}, and task: ${taskList.map(task => task.name)}"
+                  s"source: ${source}, and task: ${taskList.map(task => task.name + " and here is the path:" + task.path)}"
                 )
               }
           }

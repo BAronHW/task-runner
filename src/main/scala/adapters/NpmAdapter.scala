@@ -49,7 +49,8 @@ object NpmAdapter extends TaskDiscoverer[IO] {
           command = block.command,
           description = block.description,
           dependencies = List(),
-          source = this.name
+          source = this.name,
+          path = block.path
         )
       )
       .compile
@@ -76,7 +77,7 @@ object NpmAdapter extends TaskDiscoverer[IO] {
         pkg.scripts
           .getOrElse(Map.empty)
           .map { case (scriptName, command) =>
-            NpmBlock(name = scriptName, command = command)
+            NpmBlock(name = scriptName, command = command, path = path)
           }
           .toList
       }

@@ -32,7 +32,8 @@ object TaskResolver {
         command = discoveredTask.command,
         description = discoveredTask.description,
         dependencies = List.empty,
-        source = discoveredTask.source
+        source = discoveredTask.source,
+        path = discoveredTask.path
       ),
       dependencyNames = discoveredTask.dependencies
     )

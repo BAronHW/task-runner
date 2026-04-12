@@ -1,5 +1,7 @@
 package adapters
 
+import fs2.io.file.Path
+
 sealed trait AdapterBlock {
   def name: String
   def command: String
@@ -16,7 +18,8 @@ case class TaskRunnerYamlChildBlock(
 
 case class NpmBlock(
     name: String,
-    command: String
+    command: String,
+    path: Path
 ) extends AdapterBlock {
   override val description: Option[String] = None
   override val dependencies: Option[List[String]] = None

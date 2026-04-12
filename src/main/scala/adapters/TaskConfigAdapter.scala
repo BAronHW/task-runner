@@ -63,7 +63,7 @@ object TaskConfigAdapter extends TaskDiscoverer[IO] {
       )
       .map { pkg =>
         pkg.tasks.map { childTask =>
-          createDiscoveredTask(childTask)
+          createDiscoveredTask(childTask, path)
         }
       }
 
@@ -73,14 +73,16 @@ object TaskConfigAdapter extends TaskDiscoverer[IO] {
     * @return A DiscoveredTask
     */
   private def createDiscoveredTask(
-      taskRunnerChild: TaskRunnerYamlChildBlock
+      taskRunnerChild: TaskRunnerYamlChildBlock,
+      path: Path
   ): DiscoveredTask = {
     DiscoveredTask(
       name = taskRunnerChild.name,
       command = taskRunnerChild.command,
       description = taskRunnerChild.description,
       source = this.name,
-      dependencies = taskRunnerChild.dependencies.getOrElse(List.empty)
+      dependencies = taskRunnerChild.dependencies.getOrElse(List.empty),
+      path = path
     )
   }
 }
