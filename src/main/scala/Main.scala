@@ -5,6 +5,8 @@ import core.TaskResolver
 import fs2.io.file.Path
 import graph.TaskGraphResolver
 
+import scala.sys.process.Process
+
 object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
@@ -29,7 +31,7 @@ object Main extends IOApp {
               .groupBy(task => task.source)
               .foreach { case (source, taskList) =>
                 println(
-                  s"source: ${source}, and task: ${taskList.map(task => task.name + " and here is the path:" + task.path)}"
+                  s"source: ${source}, and task: ${taskList.map(task => task.name)}"
                 )
               }
           }
