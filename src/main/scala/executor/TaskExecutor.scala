@@ -18,22 +18,20 @@ object TaskExecutor {
   private def compileTaskBatch(sortedList: List[Task]): List[List[Task]] = {
     sortedList.foldLeft(List.empty[List[Task]]) { (batch, task) =>
       {
-        // a set of unique task names for the current task
         val taskDependenciesNames =
           task.dependencies.map(tsk => tsk.name).toSet
-        // find the index where all dependencies already appear before it
-        // check if all of current task.dependency exists in previous batches
-        val batchIndex = batch.indexWhere(innerBatch =>
-          // find the index where current tasks dependency list is a subset of the inner batch
-          // do this for every inner batch
-          taskDependenciesNames.subsetOf(
-            innerBatch.map(_.name).toSet
-          )
-        )
+
+        val batchIndex = batch.zipWithIndex.indexWhere {
+          case (_, index) => {
+            val setOfTasks = batch.take(index).flatten.toSet
+            taskDependenciesNames.subsetOf(setOfTasks.map(_.name))
+          }
+        }
         if (batchIndex == -1) batch :+ List(task)
-        else batch.updated(batchIndex + 1, batch(batchIndex + 1) :+ task)
+        else batch.updated(batchIndex, batch(batchIndex) :+ task)
       }
     }
-
   }
+
+  
 }
