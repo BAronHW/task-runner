@@ -21,6 +21,13 @@ object TaskExecutor {
     batches.flatMap(batch => batch.map(task => runTask(task)))
   }
 
+  /** Is responsible for running a singular task. Does this by using the fs2 ProcessBuilder
+    * in order to stream output. Uses local machine's environment variables and runs the task on its discovered path
+    * streams the processes result and decode its bytes into text then get its texts lines
+    * then printOut its values.
+    * @param task - A single Task case class
+    * @return - IO[Unit]
+    */
   private def runTask(task: Task): IO[Unit] = {
     ProcessBuilder("sh", List("-c", task.command))
       .withInheritEnv(true)
