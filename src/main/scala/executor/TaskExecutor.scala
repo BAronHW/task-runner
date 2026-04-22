@@ -1,8 +1,9 @@
 package executor
 
 import cats.effect.IO
+import cats.implicits._
 import core.Task
-import fs2.io.process.{ProcessBuilder, Processes}
+import fs2.io.process.ProcessBuilder
 import fs2.text
 
 /** This class accepts a sorted list of tasks from the TaskGraphResolver which then essentially
@@ -16,10 +17,10 @@ object TaskExecutor {
     executeTaskBatch(batches)
   }
 
-  private def executeTaskBatch(taskBatch: List[Task]): List[IO[Unit]] = {
-    val batches = this.compileTaskBatch(taskBatch)
-    batches.flatMap(batch => batch.map(task => runTask(task)))
-  }
+  private def executeTaskBatch(batches: List[List[Task]]): IO[Unit] =
+    batches.foldLeft(IO.unit) { (prev, batch) =>
+      prev >> batch.parTraverse_(runTask)
+    }
 
   /** Is responsible for running a singular task. Does this by using the fs2 ProcessBuilder
     * in order to stream output. Uses local machine's environment variables and runs the task on its discovered path
@@ -34,12 +35,32 @@ object TaskExecutor {
       .withWorkingDirectory(task.path)
       .spawn[IO]
       .use(process => {
-        process.stdout
+        val stdout = process.stdout
           .through(text.utf8.decode)
           .through(text.lines)
           .evalMap(line => IO.println(s"[${task.name}] $line"))
           .compile
           .drain
+
+        val stderr = process.stderr
+          .through(text.utf8.decode)
+          .through(text.lines)
+          .compile
+          .toList
+
+        for {
+          both <- IO.both(stdout, stderr)
+          (_, errors) = both
+          _ <-
+            if (errors.nonEmpty)
+              IO.raiseError(
+                new Exception(
+                  s"[${task.name}] failed:\n${errors.mkString("\n")}"
+                )
+              )
+            else
+              IO.unit
+        } yield ()
       })
 
   }

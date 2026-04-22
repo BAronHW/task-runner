@@ -27,7 +27,7 @@ object NpmAdapter extends TaskDiscoverer[IO] {
 
   /** Walks through the whole CWD and finds all package.json files
     * converts all found files into readable Json structures via usage of circe parser
-    * converts the json structure into DiscoveredTask case classes
+    * converts the JSON structure into DiscoveredTask case classes
     * @param dir - the current working directory
     * @return a list of all discovered Tasks
     */
