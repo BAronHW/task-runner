@@ -1,5 +1,6 @@
 package executor
 
+import cats.data.{Validated, ValidatedNel}
 import cats.effect.IO
 import cats.implicits._
 import core.Task
@@ -11,16 +12,16 @@ import fs2.text
   * @param sortedList - This is a list of sorted tasks that the Task Executor is supposed to execute
   */
 object TaskExecutor {
-
   def execute(sortedTasks: List[Task]) = {
     val batches = compileTaskBatch(sortedTasks)
     executeTaskBatch(batches)
   }
 
-  private def executeTaskBatch(batches: List[List[Task]]): IO[Unit] =
+  private def executeTaskBatch(batches: List[List[Task]]): IO[Unit] = {
     batches.foldLeft(IO.unit) { (prev, batch) =>
-      prev >> batch.parTraverse_(runTask)
+      prev >> batch.parTraverse_(task => runTask(task))
     }
+  }
 
   /** Is responsible for running a singular task. Does this by using the fs2 ProcessBuilder
     * in order to stream output. Uses local machine's environment variables and runs the task on its discovered path
@@ -29,7 +30,7 @@ object TaskExecutor {
     * @param task - A single Task case class
     * @return - IO[Unit]
     */
-  private def runTask(task: Task): IO[Unit] = {
+  private def runTask(task: Task): IO[ValidatedNel[String, Unit]] = {
     ProcessBuilder("sh", List("-c", task.command))
       .withInheritEnv(true)
       .withWorkingDirectory(task.path)
@@ -51,16 +52,12 @@ object TaskExecutor {
         for {
           both <- IO.both(stdout, stderr)
           (_, errors) = both
-          _ <-
-            if (errors.nonEmpty)
-              IO.raiseError(
-                new Exception(
-                  s"[${task.name}] failed:\n${errors.mkString("\n")}"
-                )
-              )
-            else
-              IO.unit
-        } yield ()
+          validation <-
+            if (errors.nonEmpty) {
+              IO.pure(errors.mkString("\n").invalidNel)
+            } else
+              IO.pure(().validNel)
+        } yield (validation)
       })
 
   }
