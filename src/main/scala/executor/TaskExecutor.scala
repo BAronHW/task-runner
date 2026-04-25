@@ -1,6 +1,6 @@
 package executor
 
-import cats.data.{Validated, ValidatedNel}
+import cats.data.{EitherT, Validated, ValidatedNel}
 import cats.effect.IO
 import cats.implicits._
 import core.Task
@@ -17,9 +17,18 @@ object TaskExecutor {
     executeTaskBatch(batches)
   }
 
-  private def executeTaskBatch(batches: List[List[Task]]): IO[Unit] = {
-    batches.foldLeft(IO.unit) { (prev, batch) =>
-      prev >> batch.parTraverse_(task => runTask(task))
+  private def executeTaskBatch(
+      batches: List[List[Task]]
+  ): EitherT[IO, List[String], Unit] = {
+    val res = batches.foldLeft(IO.unit) { (prev, batch) =>
+      prev >> batch.parTraverse_ { task =>
+        val taskResult = runTask(task)
+        for {
+          validNel <- taskResult
+
+        } yield ()
+
+      }
     }
   }
 
