@@ -1,5 +1,6 @@
 package executor
 
+import cats.data.Validated.{Invalid, Valid}
 import cats.data.{EitherT, Validated, ValidatedNel}
 import cats.effect.IO
 import cats.implicits._
@@ -21,11 +22,13 @@ object TaskExecutor {
       batches: List[List[Task]]
   ): EitherT[IO, List[String], Unit] = {
     val res = batches.foldLeft(IO.unit) { (prev, batch) =>
-      prev >> batch.parTraverse_ { task =>
-        val taskResult = runTask(task)
+      prev >> batch.parTraverse { task =>
         for {
-          validNel <- taskResult
-
+          result <- runTask(task)
+          _ <- result match {
+            case Valid(_)        => IO.Unit
+            case Invalid(errors) => IO.println(errors.toList.mkString("\n"))
+          }
         } yield ()
 
       }
