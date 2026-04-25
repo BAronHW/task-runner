@@ -20,18 +20,12 @@ object TaskExecutor {
 
   private def executeTaskBatch(
       batches: List[List[Task]]
-  ): EitherT[IO, List[String], Unit] = {
-    val res = batches.foldLeft(IO.unit) { (prev, batch) =>
-      prev >> batch.parTraverse { task =>
-        for {
-          result <- runTask(task)
-          _ <- result match {
-            case Valid(_)        => IO.Unit
-            case Invalid(errors) => IO.println(errors.toList.mkString("\n"))
-          }
-        } yield ()
-
-      }
+  ): IO[ValidatedNel[String, Unit]] = {
+    batches.foldLeft(IO.pure(().validNel[String])) { (prev, batch) =>
+      for {
+        prevResult <- prev
+        batchResults <- batch.parTraverse(runTask)
+      } yield batchResults.foldLeft(prevResult)(_ combine _)
     }
   }
 
