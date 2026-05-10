@@ -32,10 +32,10 @@ class StateService[F[_]: Monad](ref: Ref[F, SystemState]) {
   ): F[Boolean] = {
     // takes a function that returns the new state and also funcition return
     ref.modify { state =>
-      state.taskStatuses.find { case (key, value) => key.id == taskId } match {
+      state.taskStatuses.find { case (key, _) => key.id == taskId } match {
         case Some((task, _)) =>
-          (state.taskStatuses.update(task, taskStatus), true)
-        case None => (state.taskStatuses, false)
+          (state.copy(state.taskStatuses.updated(task, taskStatus)), true)
+        case None => (state, false)
       }
     }
   }
