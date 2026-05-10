@@ -2,6 +2,7 @@ import adapters.{NpmAdapter, TaskConfigAdapter}
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits._
 import core.TaskResolver
+import executor.TaskExecutor
 import fs2.io.file.Path
 import graph.TaskGraphResolver
 
@@ -26,15 +27,7 @@ object Main extends IOApp {
       .flatMap {
         case Left(error) => IO.println(s"Cycle detected: ${error.message}")
         case Right(sorted) =>
-          IO {
-            sorted
-              .groupBy(task => task.source)
-              .foreach { case (source, taskList) =>
-                println(
-                  s"source: ${source}, and task: ${taskList.map(task => task.name)}"
-                )
-              }
-          }
+          TaskExecutor.execute(sorted)
       }
       .as(ExitCode.Success)
   }

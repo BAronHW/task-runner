@@ -31,3 +31,5 @@ case class PackageJson(
 )
 
 case class TaskRunnerConfig(tasks: List[TaskRunnerYamlChildBlock])
+
+case class FormatError(message: String) extends Exception(message)

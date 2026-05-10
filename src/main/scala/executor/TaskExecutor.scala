@@ -2,6 +2,7 @@ package executor
 
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.{EitherT, Validated, ValidatedNel}
+import cats.effect.ExitCode.Error
 import cats.effect.IO
 import cats.implicits._
 import core.Task
@@ -13,7 +14,7 @@ import fs2.text
   * @param sortedList - This is a list of sorted tasks that the Task Executor is supposed to execute
   */
 object TaskExecutor {
-  def execute(sortedTasks: List[Task]) = {
+  def execute(sortedTasks: List[Task]): IO[ValidatedNel[String, Unit]] = {
     val batches = compileTaskBatch(sortedTasks)
     executeTaskBatch(batches)
   }
@@ -25,7 +26,13 @@ object TaskExecutor {
       for {
         prevResult <- prev
         batchResults <- batch.parTraverse(runTask)
-      } yield batchResults.foldLeft(prevResult)(_ combine _)
+        combined = batchResults.foldLeft(prevResult)(_ combine _)
+        _ <- combined match {
+          case Valid(_) => IO.println("batch succeeded")
+          case Invalid(errors) =>
+            IO.println(s"batch failed:\n${errors.toList.mkString("\n")}")
+        }
+      } yield combined
     }
   }
 
@@ -36,37 +43,39 @@ object TaskExecutor {
     * @param task - A single Task case class
     * @return - IO[Unit]
     */
-  private def runTask(task: Task): IO[ValidatedNel[String, Unit]] = {
-    ProcessBuilder("sh", List("-c", task.command))
-      .withInheritEnv(true)
-      .withWorkingDirectory(task.path)
-      .spawn[IO]
-      .use(process => {
-        val stdout = process.stdout
-          .through(text.utf8.decode)
-          .through(text.lines)
-          .evalMap(line => IO.println(s"[${task.name}] $line"))
-          .compile
-          .drain
+  private def runTask(task: Task): IO[ValidatedNel[String, Unit]] =
+    IO.fromOption(task.path.parent)(
+      new Exception(s"Could not resolve parent directory for ${task.path}")
+    ).flatMap { dir =>
+      ProcessBuilder("sh", List("-c", task.command))
+        .withInheritEnv(true)
+        .withWorkingDirectory(dir)
+        .spawn[IO]
+        .use { process =>
+          val stdout = process.stdout
+            .through(text.utf8.decode)
+            .through(text.lines)
+            .evalMap(line => IO.println(s"[${task.name}] $line"))
+            .compile
+            .drain
 
-        val stderr = process.stderr
-          .through(text.utf8.decode)
-          .through(text.lines)
-          .compile
-          .toList
+          val stderr = process.stderr
+            .through(text.utf8.decode)
+            .through(text.lines)
+            .compile
+            .toList
 
-        for {
-          both <- IO.both(stdout, stderr)
-          (_, errors) = both
-          validation <-
-            if (errors.nonEmpty) {
-              IO.pure(errors.mkString("\n").invalidNel)
-            } else
-              IO.pure(().validNel)
-        } yield (validation)
-      })
-
-  }
+          for {
+            both <- IO.both(stdout, stderr)
+            (_, errors) = both
+            validation <-
+              if (errors.nonEmpty)
+                IO.pure(errors.mkString("\n").invalidNel)
+              else
+                IO.pure(().validNel)
+          } yield validation
+        }
+    }
 
   /** This function is used to create a list of lists where each inner list represents a batch of
     * tasks to execute together. We create this by reducing on the given sortedList. The starting value
