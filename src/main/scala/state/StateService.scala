@@ -1,9 +1,11 @@
 package state
 
 import cats.Monad
+import cats.effect.unsafe.PollResult.Complete
 import cats.effect.{IO, Ref}
 import core.{SystemState, Task, TaskStatus}
 import cats.implicits._
+import core.TaskStatus.{Pending, Running}
 
 import java.util.UUID
 
@@ -20,17 +22,27 @@ class StateService[F[_]: Monad](ref: Ref[F, SystemState]) {
     ref.get
   }
 
+  /** Given a single taskId returns the singular KV element associated to that taskId
+    * @param taskId the taskId that you are fetching
+    * @return Map[Task, TaskStatus] Singular KV map that represents the taskId and the taskState of that
+    * taskId
+    */
   def getSingleTaskState(taskId: UUID): F[Map[Task, TaskStatus]] = {
     ref.get.map { state =>
       state.taskStatuses.filter { case (key, value) => key.id == taskId }
     }
   }
 
+  /** Allows you to update a single task state
+    * @param taskId the taskId that you want to update
+    * @param taskStatus the taskStatus that you want to set it to
+    * @return
+    */
   def updateSingleTaskState(
       taskId: UUID,
       taskStatus: TaskStatus
   ): F[Boolean] = {
-    // takes a function that returns the new state and also funcition return
+    // takes a function that returns the new state and also function return
     ref.modify { state =>
       state.taskStatuses.find { case (key, _) => key.id == taskId } match {
         case Some((task, _)) =>
@@ -38,5 +50,18 @@ class StateService[F[_]: Monad](ref: Ref[F, SystemState]) {
         case None => (state, false)
       }
     }
+  }
+
+  def initializeTasks(tasks: List[Task]): F[Unit] = {
+    val taskMap = tasks.map(task => (task, Pending)).toMap
+    ref.set(SystemState(taskMap, List.empty[String]))
+  }
+
+  def areAllTasksComplete(): F[Boolean] = {
+    ref.get.map(state => {
+      val statusArr = state.taskStatuses
+      statusArr
+        .forall(status => (status._2 != Running && status._2 != Pending))
+    })
   }
 }
