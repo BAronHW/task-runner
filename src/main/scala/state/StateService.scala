@@ -52,11 +52,18 @@ class StateService[F[_]: Monad](ref: Ref[F, SystemState]) {
     }
   }
 
+  /** This function is used to initialize the map that holds the state of all the tasks and sets their statuses to equal pending
+    * @param tasks a list of tasks that the task runner has in its system
+    * @return F[Unit]
+    */
   def initializeTasks(tasks: List[Task]): F[Unit] = {
     val taskMap = tasks.map(task => (task, Pending)).toMap
     ref.set(SystemState(taskMap, List.empty[String]))
   }
 
+  /**  This function returns true when all tasks in the state are not running and not pending otherwise it returns false
+    * @return
+    */
   def areAllTasksComplete(): F[Boolean] = {
     ref.get.map(state => {
       val statusArr = state.taskStatuses
