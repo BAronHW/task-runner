@@ -35,3 +35,8 @@ object TaskStatus {
   final case object Running extends TaskStatus { val status = "running" }
   final case object Skipped extends TaskStatus { val status = "skipped" }
 }
+
+case class SystemState(
+    taskStatuses: Map[Task, TaskStatus],
+    errors: List[String]
+)
