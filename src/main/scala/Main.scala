@@ -1,12 +1,12 @@
 import adapters.{NpmAdapter, TaskConfigAdapter}
 import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.kernel.Ref
 import cats.implicits._
-import core.TaskResolver
+import core.{SystemState, TaskResolver}
 import executor.TaskExecutor
 import fs2.io.file.Path
 import graph.TaskGraphResolver
-
-import scala.sys.process.Process
+import state.StateService
 
 object Main extends IOApp {
 
@@ -27,7 +27,12 @@ object Main extends IOApp {
       .flatMap {
         case Left(error) => IO.println(s"Cycle detected: ${error.message}")
         case Right(sorted) =>
-          TaskExecutor.execute(sorted)
+          for {
+            ref <- Ref.of[IO, SystemState](SystemState(Map.empty, List.empty))
+            stateService = new StateService[IO](ref)
+            _ <- stateService.initializeTasks(sorted)
+            result <- TaskExecutor.execute(sorted, stateService)
+          } yield (result)
       }
       .as(ExitCode.Success)
   }

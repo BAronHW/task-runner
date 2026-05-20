@@ -6,26 +6,32 @@ import cats.effect.ExitCode.Error
 import cats.effect.IO
 import cats.implicits._
 import core.Task
+import core.TaskStatus.{Failed, Running, Success}
 import fs2.io.process.ProcessBuilder
 import fs2.text
+import state.StateService
 
 /** This class accepts a sorted list of tasks from the TaskGraphResolver which then essentially
   * executes these tasks in an optimal way by executing tasks that have no dependencies in parallel
   * @param sortedList - This is a list of sorted tasks that the Task Executor is supposed to execute
   */
 object TaskExecutor {
-  def execute(sortedTasks: List[Task]): IO[ValidatedNel[String, Unit]] = {
+  def execute(
+      sortedTasks: List[Task],
+      stateService: StateService[IO]
+  ): IO[ValidatedNel[String, Unit]] = {
     val batches = compileTaskBatch(sortedTasks)
-    executeTaskBatch(batches)
+    executeTaskBatch(batches, stateService)
   }
 
   private def executeTaskBatch(
-      batches: List[List[Task]]
+      batches: List[List[Task]],
+      stateService: StateService[IO]
   ): IO[ValidatedNel[String, Unit]] = {
     batches.foldLeft(IO.pure(().validNel[String])) { (prev, batch) =>
       for {
         prevResult <- prev
-        batchResults <- batch.parTraverse(runTask)
+        batchResults <- batch.parTraverse(runTask(_, stateService))
         combined = batchResults.foldLeft(prevResult)(_ combine _)
         _ <- combined match {
           case Valid(_) => IO.println("batch succeeded")
@@ -43,38 +49,45 @@ object TaskExecutor {
     * @param task - A single Task case class
     * @return - IO[Unit]
     */
-  private def runTask(task: Task): IO[ValidatedNel[String, Unit]] =
+  private def runTask(task: Task, stateService: StateService[IO]): IO[ValidatedNel[String, Unit]] =
     IO.fromOption(task.path.parent)(
       new Exception(s"Could not resolve parent directory for ${task.path}")
     ).flatMap { dir =>
-      ProcessBuilder("sh", List("-c", task.command))
-        .withInheritEnv(true)
-        .withWorkingDirectory(dir)
-        .spawn[IO]
-        .use { process =>
-          val stdout = process.stdout
-            .through(text.utf8.decode)
-            .through(text.lines)
-            .evalMap(line => IO.println(s"[${task.name}] $line"))
-            .compile
-            .drain
+      for {
+        _ <- stateService.updateSingleTaskState(task.id, Running)
+        validation <- ProcessBuilder("sh", List("-c", task.command))
+          .withInheritEnv(true)
+          .withWorkingDirectory(dir)
+          .spawn[IO]
+          .use { process =>
+            val stdout = process.stdout
+              .through(text.utf8.decode)
+              .through(text.lines)
+              .evalMap(line => IO.println(s"[${task.name}] $line"))
+              .compile
+              .drain
 
-          val stderr = process.stderr
-            .through(text.utf8.decode)
-            .through(text.lines)
-            .compile
-            .toList
+            val stderr = process.stderr
+              .through(text.utf8.decode)
+              .through(text.lines)
+              .compile
+              .toList
 
-          for {
-            both <- IO.both(stdout, stderr)
-            (_, errors) = both
-            validation <-
-              if (errors.nonEmpty)
-                IO.pure(errors.mkString("\n").invalidNel)
-              else
-                IO.pure(().validNel)
-          } yield validation
+            for {
+              both <- IO.both(stdout, stderr)
+              (_, errors) = both
+              result <-
+                if (errors.nonEmpty)
+                  IO.pure(errors.mkString("\n").invalidNel)
+                else
+                  IO.pure(().validNel)
+            } yield result
+          }
+        _ <- validation match {
+          case Valid(_)   => stateService.updateSingleTaskState(task.id, Success)
+          case Invalid(_) => stateService.updateSingleTaskState(task.id, Failed)
         }
+      } yield validation
     }
 
   /** This function is used to create a list of lists where each inner list represents a batch of
